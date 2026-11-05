@@ -1,0 +1,36 @@
+PASS 1.1 chart and pattern list render
+PASS 1.2 a tighter tolerance finds fewer patterns
+PASS 1.3 volume at 3x: breakouts skipped with the reason
+PASS 1.4 swing mode draws 60-minute bars across sessions
+PASS 1.5 switching symbol re-runs on that symbol's bars
+PASS 2.1 backtest shows trades and stats
+PASS 2.2 no costs or slippage: the total goes up
+PASS 2.3 a negative cost is refused with a reason
+PASS 2.4 removing SPY changes the trade count and the table
+PASS 2.5 per-account results in rupees and dollars
+PASS 2.6 clicking a trade opens it on the chart
+PASS 3.1 three account cards with live sessions
+PASS 3.2 an NSE day signal: Zerodha and Angel One take it, IBKR skips it
+PASS 3.3 without a registered static IP Zerodha refuses (SEBI rule)
+PASS 3.3b without the morning login Angel One refuses (session from yesterday)
+PASS 3.4 send (paper) logs it in the journal, nothing sent
+PASS 3.5 the same signal again is refused
+PASS 3.6 kill switch: every account refuses
+PASS 3.7 a capital too small for one share: refused with the numbers
+PASS 3.8 a negative capital is refused
+PASS 3.9 an NSE swing short is refused for cash accounts
+PASS 4.1 the Pine Script is shown
+PASS 4.2 a test alert is accepted and routed
+PASS 4.3 the same alert twice is refused as a duplicate
+PASS 4.4 a wrong secret is refused
+PASS 4.5 a symbol off the watchlist is refused
+PASS 4.6 a body that is not JSON is refused
+PASS 5.1 three tiers with the featured $2,400 and 4 milestones
+PASS 5.2 honest scope footer
+PASS 5.3 the code zip downloads
+PASS 5.4 architecture and the production proof are shown
+PASS 6.1 no sideways scroll at phone width
+PASS 6.2 opened off disk it still works (embedded data)
+PASS 6.3 no console or page errors
+
+34 passed, 0 failed

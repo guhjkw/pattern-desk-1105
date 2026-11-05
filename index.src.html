@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pattern Desk · working demo</title>
+<meta name="description" content="Working demo of a multi-account pattern trading system: double top and double bottom strategies for day and swing trading, a 15-day backtest, TradingView alerts, and one signal routed to Zerodha, Angel One and Interactive Brokers with sizing and risk checks.">
+<meta name="robots" content="noindex">
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#0d1117;--panel:#151b23;--panel2:#1b222c;--line:#283241;--line2:#1f2732;--text:#e6edf3;--muted:#93a1b0;--faint:#66737f;
+  --acc:#4ea1ff;--acc2:#2f7fd8;--long:#2fb67c;--short:#e25c5c;--warn:#e3a33b;--ok:#2fb67c;--err:#e25c5c;
+  --gold:#f0c45c;--goldbg:#2a2412;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+html,body{margin:0}
+body{font:14px/1.5 var(--sans);color:var(--text);background:var(--bg);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--acc)}
+[hidden]{display:none!important}
+.mono{font-family:var(--mono);font-size:12.5px}
+.muted{color:var(--muted)}.faint{color:var(--faint)}
+.r{text-align:right}
+td,th{font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.pd-strip{background:#0a0d12;border-bottom:1px solid var(--line);color:var(--muted);font-size:12.5px;padding:7px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.pd-strip b{color:var(--text)}
+.pd-strip .sp{flex:1}
+.pd-btn{border:1px solid var(--line);background:var(--panel2);border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:550}
+.pd-btn:hover{border-color:#3a4658}
+.pd-btn.pri{background:var(--acc2);border-color:var(--acc2);color:#fff}
+.pd-btn.sm{padding:3px 9px;font-size:12.5px}
+.pd-btn.gold{border-color:#6b5520;color:var(--gold)}
+.pd-btn.danger{border-color:#6a2b2b;color:#ff8b8b}
+.pd-btn.on{background:#3a1717;border-color:#a23a3a;color:#ffb3b3}
+.pd-top{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.pd-brand{font-weight:700;font-size:16px;letter-spacing:-.01em;display:flex;gap:8px;align-items:center}
+.pd-logo{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,#2f7fd8,#2fb67c);display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff}
+.pd-top .sp{flex:1}
+.pd-chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:650;border-radius:10px;padding:1px 8px;white-space:nowrap;border:1px solid transparent}
+.pd-chip.paper{background:#1b2a3d;color:#9ccaff;border-color:#2b4566}
+.pd-chip.ok{background:#12301f;color:#7fe0b0}.pd-chip.err{background:#3a1717;color:#ff9c9c}.pd-chip.warn{background:#33260f;color:#f1c27a}.pd-chip.grey{background:#20262f;color:var(--muted)}
+.pd-chip.long{background:#12301f;color:#7fe0b0}.pd-chip.short{background:#3a1717;color:#ff9c9c}
+.pd-tabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--line);background:var(--panel);overflow-x:auto}
+.pd-tabs button{border:0;background:none;padding:10px 12px;cursor:pointer;color:var(--muted);font-weight:600;border-bottom:2px solid transparent;white-space:nowrap}
+.pd-tabs button.on{color:var(--text);border-bottom-color:var(--acc)}
+.pd-view{padding:18px 20px 44px;max-width:1320px;margin:0 auto}
+.pd-view h1{font-size:20px;margin:0 0 4px}
+.pd-view .lead{color:var(--muted);margin:0 0 14px;max-width:900px}
+h4.pd-h{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px;font-weight:700}
+.pd-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pd-grid{display:grid;gap:12px}
+.pd-g2{grid-template-columns:repeat(2,minmax(0,1fr))}.pd-g3{grid-template-columns:repeat(3,minmax(0,1fr))}.pd-g6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.pd-side{display:grid;grid-template-columns:minmax(0,290px) minmax(0,1fr);gap:14px;align-items:start}
+.pd-field{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px}
+.pd-field input,.pd-field select,.pd-field textarea{border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--panel2);font-weight:400;color:var(--text);font-size:13.5px;min-width:0;width:100%}
+.pd-field input[type=checkbox]{width:auto}
+.pd-field textarea{font-family:var(--mono);font-size:12px}
+.pd-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pd-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pd-kpi .lab{font-size:11.5px;color:var(--muted);font-weight:650}
+.pd-kpi .val{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.pos{color:var(--long);font-weight:650}.neg{color:var(--short);font-weight:650}
+.pd-tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table.pd-tbl{border-collapse:collapse;width:100%;font-size:13px}
+.pd-tbl th{background:var(--panel2);text-align:left;font-weight:650;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.pd-tbl td{padding:7px 10px;border-bottom:1px solid var(--line2);vertical-align:top}
+.pd-tbl tr:last-child td{border-bottom:0}
+.pd-tbl tr.click{cursor:pointer}.pd-tbl tr.click:hover td{background:#1a212b}
+.pd-banner{border-radius:8px;padding:10px 14px;margin:0 0 12px}
+.pd-banner.ok{background:#102619;border:1px solid #1f4d33;color:#a7ecc6}.pd-banner.err{background:#2a1214;border:1px solid #5c2328;color:#ffb3b3}
+.pd-banner.warn{background:#2a200d;border:1px solid #5a4417;color:#f6d28f}.pd-banner.info{background:#111f31;border:1px solid #23405f;color:#b3d4ff}
+pre.pd-code{background:#0a0d12;border:1px solid var(--line);color:#d6e2ee;border-radius:8px;padding:12px 14px;overflow:auto;font:12px/1.55 var(--mono);margin:0;max-height:360px;white-space:pre}
+svg.pd-chart{width:100%;height:auto;display:block;background:#0b0f15;border:1px solid var(--line);border-radius:8px}
+.pd-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:6px 2px}
+.pd-legend i{display:inline-block;width:12px;height:3px;vertical-align:middle;margin-right:4px}
+.pd-acct{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.pd-acct h3{margin:0 0 2px;font-size:15px}
+.pd-dec{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--panel)}
+.pd-dec.take{border-color:#245a3d}.pd-dec.skip{border-color:#4a2a2e}
+.pd-dec summary .mono{overflow-wrap:anywhere;word-break:break-all}
+.pd-tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pd-tier{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;position:relative}
+.pd-tier.feat{border:2px solid var(--gold);background:linear-gradient(#1d1a10,var(--panel))}
+.pd-tier .tag{position:absolute;top:-11px;left:14px;background:var(--gold);color:#241c06;font-size:11px;font-weight:800;border-radius:10px;padding:2px 10px}
+.pd-tier .price{font-size:28px;font-weight:800}
+.pd-tier ul{margin:8px 0 0;padding-left:18px;color:#c9d4df}.pd-tier li{margin:3px 0}
+.pd-strike{text-decoration:line-through;color:var(--faint)}
+.pd-cta{background:#0f2a22;border:1px solid #1f5a47;border-radius:12px;padding:16px 18px}
+.pd-scope{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);margin-top:18px;padding-top:12px}
+.pd-toast{position:fixed;right:16px;bottom:16px;background:#22303f;color:#fff;border:1px solid #33465c;border-radius:8px;padding:10px 14px;max-width:420px;z-index:50;font-size:13px}
+svg.pd-arch{width:100%;height:auto;display:block}
+@media (max-width:980px){.pd-g6{grid-template-columns:repeat(3,minmax(0,1fr))}.pd-g3,.pd-tiers{grid-template-columns:minmax(0,1fr)}.pd-side{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.pd-g2{grid-template-columns:minmax(0,1fr)}.pd-g6{grid-template-columns:repeat(2,minmax(0,1fr))}.pd-view{padding:14px 16px 40px}}
+</style>
+</head>
+<body>
+<div class="pd-strip"><span><b>Working demo.</b> Synthetic prices and paper orders: nothing here connects to a real broker or TradingView account.</span><span class="sp"></span><button class="pd-btn sm" data-act="tab" data-arg="built">How it is built</button><button class="pd-btn sm gold" data-act="tab" data-arg="offer">Prices and milestones</button></div>
+<div class="pd-top">
+  <div class="pd-brand"><span class="pd-logo">PD</span>Pattern Desk</div>
+  <span class="pd-chip paper">PAPER</span>
+  <span class="faint" id="datarange"></span>
+  <span class="sp"></span>
+  <button class="pd-btn sm" id="killbtn" data-act="kill">Kill switch: off</button>
+</div>
+<nav class="pd-tabs" id="tabs"></nav>
+<main id="app"></main>
+<div id="toast" class="pd-toast" hidden></div>
+
+<script src="src/patterns.js"></script>
+<script src="src/backtest.js"></script>
+<script src="src/router.js"></script>
+<script src="src/tvAlert.js"></script>
+<script id="fallback" type="application/json">__FALLBACK__</script>
+<script>
+(function () {
+  'use strict';
+  var P = PatternEngine, B = Backtest, R = Router, T = TvAlert;
+  var TESTS = '__TESTS__';
+  var S, $app = document.getElementById('app');
+  var TABS = [['lab', 'Strategy & chart'], ['backtest', 'Backtest (15 days)'], ['accounts', 'Accounts & orders'], ['tv', 'TradingView alerts'], ['built', 'How it is built'], ['offer', 'Prices']];
+  var st = {
+    tab: 'lab', symbol: 'SPY', mode: 'day', day: null, cfg: { day: P.defaultsFor('day'), swing: P.defaultsFor('swing') }, bt: { costPct: 0.03, slippageTicks: 1, symbols: null },
+    accounts: null, router: { killSwitch: false, open: {}, dayLoss: {}, routed: {} }, sigSel: null, journal: [], secret: null, tvText: '', tvResult: null, tvSeen: {}, lastBt: null, focusTrade: null
+  };
+  function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function sym(s) { return S.symbols.filter(function (x) { return x.symbol === s; })[0]; }
+  function ccy(m) { return m === 'NSE' ? '₹' : '$'; }
+  function px(v, m) { return ccy(m) + Number(v).toFixed(2); }
+  function rcls(v) { return v > 0 ? 'pos' : v < 0 ? 'neg' : 'muted'; }
+  function fmtR(v) { return (v > 0 ? '+' : '') + Number(v).toFixed(2) + 'R'; }
+  var toastT;
+  function toast(m) { var t = document.getElementById('toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 4200); }
+  function cfg() { return st.cfg[st.mode]; }
+  function prettyDay(d) { var m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; return (+d.slice(8, 10)) + ' ' + m[+d.slice(5, 7) - 1]; }
+  function randSecret() { var a = new Uint8Array(18); (window.crypto || {}).getRandomValues ? window.crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.floor(Math.random() * 256); }); return Array.prototype.map.call(a, function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
+
+  async function boot() {
+    try { if (location.protocol === 'file:') throw 0; var ctl = new AbortController(); var tm = setTimeout(function () { ctl.abort(); }, 4000); var r = await fetch('data/sample.json', { signal: ctl.signal }); clearTimeout(tm); if (!r.ok) throw 0; S = await r.json(); }
+    catch (e) { S = JSON.parse(document.getElementById('fallback').textContent); }
+    st.accounts = JSON.parse(JSON.stringify(S.accounts));
+    st.day = S.days[S.days.length - 1];
+    st.secret = randSecret();
+    document.getElementById('datarange').textContent = S.days.length + ' synthetic sessions, ' + prettyDay(S.days[0]) + ' to ' + prettyDay(S.days[S.days.length - 1]) + ' 2026';
+    var h = (location.hash || '').replace('#', '');
+    if (TABS.some(function (t) { return t[0] === h; })) st.tab = h;
+    pickDayWithSignal();
+    render();
+  }
+  function pickDayWithSignal() {
+    var r = B.runSymbol(S, sym(st.symbol), 'day', st.cfg.day, st.bt);
+    if (r.trades.length) st.day = r.trades[r.trades.length - 1].entryDay;
+  }
+
+  var rendering = false, again = false;
+  function render() {
+    if (rendering) { again = true; return; }
+    rendering = true;
+    try { renderNow(); } finally { rendering = false; }
+    if (again) { again = false; render(); }
+  }
+  function renderNow() {
+    document.getElementById('tabs').innerHTML = TABS.map(function (t) { return '<button class="' + (st.tab === t[0] ? 'on' : '') + '" data-act="tab" data-arg="' + t[0] + '">' + t[1] + '</button>'; }).join('');
+    var kb = document.getElementById('killbtn'); kb.textContent = 'Kill switch: ' + (st.router.killSwitch ? 'ON' : 'off'); kb.className = 'pd-btn sm' + (st.router.killSwitch ? ' on' : '');
+    $app.innerHTML = ({ lab: viewLab, backtest: viewBacktest, accounts: viewAccounts, tv: viewTv, built: viewBuilt, offer: viewOffer })[st.tab]();
+    after();
+  }
+
+  // ------------------------------------------------------------------ settings panel (shared by lab and backtest)
+  function settings() {
+    var c = cfg();
+    var num = function (k, label, step, min) { return '<label class="pd-field">' + label + '<input type="number" data-cfg="' + k + '" value="' + esc(c[k]) + '" step="' + step + '"' + (min !== undefined ? ' min="' + min + '"' : '') + '></label>'; };
+    return '<div class="pd-card"><h4 class="pd-h" style="margin-top:0">Strategy settings (' + (st.mode === 'day' ? 'day, 5-minute' : 'swing, 60-minute') + ')</h4>' +
+      '<div class="pd-two">' + num('pivot', 'Pivot bars each side', 1, 1) + num('tolerancePct', 'Tops within %', 0.05, 0) + num('minGap', 'Min bars apart', 1, 2) + num('maxGap', 'Max bars apart', 1, 3) +
+      num('minDepthPct', 'Neckline depth %', 0.05, 0) + num('maxBarsToBreak', 'Bars to break', 1, 1) + num('volumeMult', 'Breakout volume x', 0.1, 0) + num('minRR', 'Min reward : risk', 0.1, 0) + '</div>' +
+      '<label class="pd-field">Stop<select data-cfg="stop"><option value="last_swing"' + (c.stop === 'last_swing' ? ' selected' : '') + '>Beyond the last swing (tighter)</option><option value="tops"' + (c.stop === 'tops' ? ' selected' : '') + '>Beyond the tops / bottoms</option><option value="mid"' + (c.stop === 'mid' ? ' selected' : '') + '>Halfway into the pattern</option></select></label>' +
+      '<div class="pd-two"><label class="pd-field">Target<select data-cfg="target"><option value="measured"' + (c.target === 'measured' ? ' selected' : '') + '>Measured move</option><option value="r"' + (c.target === 'r' ? ' selected' : '') + '>Fixed R multiple</option></select></label>' +
+      (c.target === 'r' ? num('targetR', 'Target (R)', 0.5, 0.5) : num('targetMult', 'Height x', 0.25, 0.25)) + '</div>' +
+      '<label class="pd-field">Trade<select data-cfg="sides"><option value="both"' + (c.sides === 'both' ? ' selected' : '') + '>Tops and bottoms</option><option value="long"' + (c.sides === 'long' ? ' selected' : '') + '>Double bottoms only (long)</option><option value="short"' + (c.sides === 'short' ? ' selected' : '') + '>Double tops only (short)</option></select></label>' +
+      '<button class="pd-btn sm" data-act="resetcfg">Reset to defaults</button></div>';
+  }
+
+  // ------------------------------------------------------------------ lab
+  function viewLab() {
+    var s = sym(st.symbol), mode = st.mode;
+    var r = B.runSymbol(S, s, mode, cfg(), st.bt);
+    var bars = r.bars, from = 0, to = bars.length;
+    if (mode === 'day') { from = bars.findIndex(function (b) { return b.day === st.day; }); to = from; while (to < bars.length && bars[to].day === st.day) to++; }
+    var pats = r.detection.patterns.filter(function (p) { return p.p2.i >= from && p.p2.i < to; });
+    var trades = r.trades.filter(function (t) { var i = bars.findIndex(function (b) { return b.day === t.entryDay && b.time === t.entryTime; }); return i >= from && i < to; });
+    var days = S.days.map(function (d) { var n = r.trades.filter(function (t) { return t.entryDay === d; }).length; return '<option value="' + d + '"' + (d === st.day ? ' selected' : '') + '>' + prettyDay(d) + (n ? ' (' + n + ' trade' + (n > 1 ? 's' : '') + ')' : '') + '</option>'; }).join('');
+    var html = '<div class="pd-view"><h1>Double tops and double bottoms, found bar by bar</h1><p class="lead">This is a live tool, not a video. Change any setting and the patterns, signals and trades below are found again from the bars, the same way the server does it live: a swing high only counts once ' + cfg().pivot + ' bars have closed after it, so nothing here uses the future.</p>' +
+      '<div class="pd-side"><div>' +
+      '<div class="pd-card" style="margin-bottom:12px"><label class="pd-field">Symbol<select data-bind="symbol">' + S.symbols.map(function (x) { return '<option value="' + x.symbol + '"' + (x.symbol === st.symbol ? ' selected' : '') + '>' + x.symbol + ' · ' + x.market + ' · ' + esc(x.market === 'NSE' ? 'Zerodha, Angel One' : 'IBKR') + '</option>'; }).join('') + '</select></label>' +
+      '<label class="pd-field">Style<select data-bind="mode"><option value="day"' + (mode === 'day' ? ' selected' : '') + '>Day trading (5-minute bars)</option><option value="swing"' + (mode === 'swing' ? ' selected' : '') + '>Swing trading (60-minute bars)</option></select></label>' +
+      (mode === 'day' ? '<label class="pd-field">Session<select data-bind="day">' + days + '</select></label>' : '') +
+      '<div class="faint" style="font-size:12px">Try to break it: set "Tops within %" to 0.05 (almost nothing qualifies), or the breakout volume to 3x (every break is skipped, with the reason), or switch the stop to "Beyond the tops" and watch reward:risk fall under 1.</div></div>' +
+      settings() + '</div><div>' +
+      chart(bars, from, to, pats, trades, s) +
+      '<div class="pd-legend"><span><i style="background:var(--warn)"></i>tops / bottoms</span><span><i style="background:#9aa7b4"></i>neckline</span><span><i style="background:var(--short)"></i>stop</span><span><i style="background:var(--long)"></i>target</span><span>▲▼ entries</span></div>';
+    html += '<h4 class="pd-h">Trades on this ' + (mode === 'day' ? 'session' : 'chart') + ' (' + trades.length + ')</h4>' + (trades.length ? tradeTable(trades) : '<p class="muted">No trades with these settings. Patterns that formed are listed below with the reason each one did not trade.</p>');
+    html += '<h4 class="pd-h">Every pattern the engine saw (' + pats.length + ')</h4>' + (pats.length ? '<div class="pd-tbl-wrap"><table class="pd-tbl"><thead><tr><th>Pattern</th><th>Tops / bottoms</th><th>Neckline</th><th>Outcome</th></tr></thead><tbody>' +
+      pats.map(function (p) { return '<tr><td>' + (p.type === 'double_top' ? 'Double top' : 'Double bottom') + '<div class="faint" style="font-size:12px">' + esc(bars[p.p1.i].time + ' and ' + bars[p.p2.i].time + (mode === 'swing' ? ' (' + prettyDay(bars[p.p1.i].day) + ', ' + prettyDay(bars[p.p2.i].day) + ')' : '')) + '</div></td><td class="mono">' + p.p1.price.toFixed(2) + ' / ' + p.p2.price.toFixed(2) + ' <span class="faint">(' + p.diffPct + '% apart)</span></td><td class="mono">' + p.neckline.toFixed(2) + '</td><td><span class="pd-chip ' + (p.status === 'triggered' ? 'ok' : p.status === 'skipped' ? 'warn' : 'grey') + '">' + p.status + '</span> <span class="muted">' + esc(p.note) + '</span></td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">No patterns on this chart.</p>');
+    return html + '</div></div></div>';
+  }
+  function tradeTable(trades, clickable) {
+    return '<div class="pd-tbl-wrap"><table class="pd-tbl"><thead><tr><th>Entry</th><th>Symbol</th><th>Side</th><th class="r">Entry</th><th class="r">Stop</th><th class="r">Target</th><th class="r">Exit</th><th>Why it closed</th><th class="r">Result</th></tr></thead><tbody>' +
+      trades.map(function (t) { return '<tr' + (clickable ? ' class="click" data-act="opentrade" data-arg="' + esc(t.id) + '"' : '') + '><td>' + prettyDay(t.entryDay) + ' ' + t.entryTime + '</td><td><b>' + t.symbol + '</b></td><td><span class="pd-chip ' + t.side + '">' + (t.side === 'long' ? 'Long' : 'Short') + '</span></td><td class="r mono">' + t.entry.toFixed(2) + '</td><td class="r mono">' + t.stop.toFixed(2) + '</td><td class="r mono">' + t.target.toFixed(2) + '</td><td class="r mono">' + t.exit.toFixed(2) + '</td><td class="muted">' + esc(t.exitReason) + (t.exitDay !== t.entryDay ? ' (' + prettyDay(t.exitDay) + ')' : '') + '</td><td class="r ' + rcls(t.r) + '">' + fmtR(t.r) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  }
+  function chart(bars, from, to, pats, trades, s) {
+    var view = bars.slice(from, to), n = view.length, bw = n > 90 ? 8 : 11, w = n * bw + 70, h = 330, pad = 16;
+    var hi = Math.max.apply(null, view.map(function (b) { return b.h; })), lo = Math.min.apply(null, view.map(function (b) { return b.l; }));
+    trades.forEach(function (t) { hi = Math.max(hi, t.stop, t.target); lo = Math.min(lo, t.stop, t.target); });
+    var span = hi - lo || 1; hi += span * 0.04; lo -= span * 0.04;
+    var y = function (v) { return pad + (hi - v) / (hi - lo) * (h - pad - 34); }, x = function (i) { return (i - from) * bw + bw / 2 + 4; };
+    var o = '<svg class="pd-chart" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Price chart with patterns">';
+    for (var g = 0; g <= 4; g++) { var gv = lo + (hi - lo) * g / 4; o += '<line x1="0" x2="' + (w - 64) + '" y1="' + y(gv) + '" y2="' + y(gv) + '" stroke="#1d2530"/><text x="' + (w - 60) + '" y="' + (y(gv) + 4) + '" font-size="10" fill="#66737f">' + gv.toFixed(2) + '</text>'; }
+    view.forEach(function (b, k) {
+      var i = from + k, up = b.c >= b.o, col = up ? '#2fb67c' : '#e25c5c', xx = x(i);
+      o += '<line x1="' + xx + '" x2="' + xx + '" y1="' + y(b.h) + '" y2="' + y(b.l) + '" stroke="' + col + '" stroke-width="1"/>' +
+        '<rect x="' + (xx - bw * 0.34) + '" y="' + Math.min(y(b.o), y(b.c)) + '" width="' + bw * 0.68 + '" height="' + Math.max(1, Math.abs(y(b.o) - y(b.c))) + '" fill="' + col + '"><title>' + b.day + ' ' + b.time + '  O ' + b.o + '  H ' + b.h + '  L ' + b.l + '  C ' + b.c + '  V ' + b.v + '</title></rect>';
+      var lab = st.mode === 'day' ? (k % 12 === 0) : (b.time === S.sessions[s.market].open);
+      if (lab) o += '<text x="' + xx + '" y="' + (h - 18) + '" font-size="10" fill="#66737f" text-anchor="middle">' + (st.mode === 'day' ? b.time : prettyDay(b.day)) + '</text>';
+    });
+    pats.forEach(function (p) {
+      var col = p.status === 'triggered' ? '#f0c45c' : '#7a6a3a';
+      [p.p1, p.p2].forEach(function (q) { o += '<circle cx="' + x(q.i) + '" cy="' + y(q.price) + '" r="4" fill="none" stroke="' + col + '" stroke-width="1.6"/>'; });
+      var end = Math.min(to - 1, p.endedAt || p.p2.i + 4);
+      o += '<line x1="' + x(p.p1.i) + '" x2="' + x(end) + '" y1="' + y(p.neckline) + '" y2="' + y(p.neckline) + '" stroke="#9aa7b4" stroke-dasharray="4 3" stroke-width="1"/>';
+    });
+    trades.forEach(function (t) {
+      var ei = bars.findIndex(function (b) { return b.day === t.entryDay && b.time === t.entryTime; }), xi = bars.findIndex(function (b) { return b.day === t.exitDay && b.time === t.exitTime; });
+      if (xi < 0) xi = Math.min(to - 1, ei + t.bars);
+      o += '<line x1="' + x(ei) + '" x2="' + x(Math.min(xi, to - 1)) + '" y1="' + y(t.stop) + '" y2="' + y(t.stop) + '" stroke="#e25c5c" stroke-width="1.4"/>' +
+        '<line x1="' + x(ei) + '" x2="' + x(Math.min(xi, to - 1)) + '" y1="' + y(t.target) + '" y2="' + y(t.target) + '" stroke="#2fb67c" stroke-width="1.4"/>';
+      var ex = x(ei), ey = y(t.entry), up = t.side === 'long';
+      var tip = up ? Math.max(y(view.reduce(function (m, b2) { return Math.min(m, b2.l); }, Infinity)) , ey + 18) : Math.min(ey - 18, ey - 18);
+      tip = up ? ey + 22 : ey - 22;
+      o += '<path d="M' + (ex - 7) + ' ' + (up ? tip + 12 : tip - 12) + ' L' + (ex + 7) + ' ' + (up ? tip + 12 : tip - 12) + ' L' + ex + ' ' + tip + ' Z" fill="' + (up ? '#2fb67c' : '#e25c5c') + '" stroke="#e6edf3" stroke-width="1.2"><title>' + (up ? 'Long' : 'Short') + ' entry ' + t.entry + '</title></path>';
+      if (xi >= from && xi < to) o += '<circle cx="' + x(xi) + '" cy="' + y(t.exit) + '" r="3" fill="' + (t.r > 0 ? '#2fb67c' : '#e25c5c') + '"><title>exit ' + t.exit + ' (' + t.exitReason + ', ' + t.r + 'R)</title></circle>';
+    });
+    return o + '<text x="8" y="' + (h - 4) + '" font-size="10" fill="#66737f">' + esc(s.symbol + ' · ' + (st.mode === 'day' ? prettyDay(st.day) + ', 5-minute bars' : '60-minute bars, all 15 sessions') + ' · synthetic prices') + '</text></svg>';
+  }
+
+  // ------------------------------------------------------------------ backtest
+  function viewBacktest() {
+    var syms = st.bt.symbols || S.symbols.map(function (x) { return x.symbol; });
+    var r = B.run(S, { mode: st.mode, symbols: syms, pattern: cfg(), backtest: st.bt });
+    st.lastBt = r;
+    var x = r.stats;
+    var html = '<div class="pd-view"><h1>Backtest: ' + r.days + ' sessions, ' + (st.mode === 'day' ? 'day trading on 5-minute bars' : 'swing trading on 60-minute bars') + '</h1><p class="lead">Every signal the engine finds is traded on the bars that follow it: stop, target, ' + (st.mode === 'day' ? 'square-off at 15:15 IST (NSE) or 15:50 ET (US)' : 'or a maximum hold of about five sessions') + ', with costs and slippage on both sides. If one bar touches the stop and the target, the stop is counted. Change the settings on the left and everything recalculates.</p>' +
+      '<div class="pd-banner warn">These are synthetic prices made for this demo, so the numbers say nothing about real markets. On your own 15 days of broker data this is where a strategy proves itself, or doesn\'t, before real money.</div>' +
+      '<div class="pd-side"><div><div class="pd-card" style="margin-bottom:12px"><label class="pd-field">Style<select data-bind="mode"><option value="day"' + (st.mode === 'day' ? ' selected' : '') + '>Day (5-minute)</option><option value="swing"' + (st.mode === 'swing' ? ' selected' : '') + '>Swing (60-minute)</option></select></label>' +
+      '<div class="pd-field">Symbols<div class="pd-row">' + S.symbols.map(function (s) { return '<label class="pd-row" style="gap:4px;font-weight:500;color:var(--text)"><input type="checkbox" data-bind="btsym" value="' + s.symbol + '"' + (syms.indexOf(s.symbol) >= 0 ? ' checked' : '') + '>' + s.symbol + '</label>'; }).join('') + '</div></div>' +
+      '<div class="pd-two"><label class="pd-field">Costs % per side<input type="number" step="0.01" min="0" data-bt="costPct" value="' + st.bt.costPct + '"></label><label class="pd-field">Slippage (ticks)<input type="number" step="1" min="0" data-bt="slippageTicks" value="' + st.bt.slippageTicks + '"></label></div></div>' + settings() + '</div><div>' +
+      '<div class="pd-grid pd-g6">' + [['Trades', x.trades], ['Win rate', x.winRate + '%'], ['Total', '<span class="' + rcls(x.totalR) + '">' + fmtR(x.totalR) + '</span>'], ['Profit factor', x.profitFactor === null ? 'no losses' : x.profitFactor], ['Max drawdown', '<span class="' + rcls(x.maxDrawdownR) + '">' + fmtR(x.maxDrawdownR) + '</span>'], ['Avg win / loss', fmtR(x.avgWinR) + ' / ' + fmtR(x.avgLossR)]].map(function (k) { return '<div class="pd-card pd-kpi"><div class="lab">' + k[0] + '</div><div class="val">' + k[1] + '</div></div>'; }).join('') + '</div>' +
+      '<h4 class="pd-h">Equity in R, trade by trade</h4>' + equity(x.curve) +
+      '<h4 class="pd-h">By account, in its own currency</h4>' + accountPnl(r) +
+      '<h4 class="pd-h">By symbol</h4><div class="pd-tbl-wrap"><table class="pd-tbl"><thead><tr><th>Symbol</th><th class="r">Patterns</th><th class="r">Signals</th><th class="r">Trades</th><th class="r">Win rate</th><th class="r">Total</th></tr></thead><tbody>' +
+      r.symbols.map(function (k) { var p = r.perSymbol[k]; return '<tr><td><b>' + k + '</b></td><td class="r">' + p.patterns + '</td><td class="r">' + p.signals + '</td><td class="r">' + p.stats.trades + '</td><td class="r">' + p.stats.winRate + '%</td><td class="r ' + rcls(p.stats.totalR) + '">' + fmtR(p.stats.totalR) + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      '<h4 class="pd-h">Every trade (click one to see it on the chart)</h4>' + (r.trades.length ? tradeTable(r.trades, true) : '<p class="muted">No trades with these settings.</p>') + '</div></div></div>';
+    return html;
+  }
+  function equity(curve) {
+    if (!curve.length) return '<p class="muted">No trades.</p>';
+    var w = 900, h = 150, vals = [0].concat(curve.map(function (c) { return c.equity; })), mx = Math.max.apply(null, vals), mn = Math.min.apply(null, vals);
+    var span = (mx - mn) || 1, y = function (v) { return 10 + (mx - v) / span * (h - 30); }, x = function (i) { return 30 + i * (w - 50) / (vals.length - 1); };
+    var d = vals.map(function (v, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' ');
+    return '<svg class="pd-chart" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="Equity curve"><line x1="30" x2="' + (w - 20) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="#2a3442" stroke-dasharray="3 3"/><text x="4" y="' + (y(0) + 4) + '" font-size="10" fill="#66737f">0R</text>' +
+      '<path d="' + d + '" fill="none" stroke="#4ea1ff" stroke-width="2"/>' + vals.slice(1).map(function (v, i) { return '<circle cx="' + x(i + 1) + '" cy="' + y(v) + '" r="3" fill="' + (curve[i].r > 0 ? '#2fb67c' : '#e25c5c') + '"><title>' + curve[i].day + ' ' + curve[i].time + ' ' + curve[i].symbol + ': ' + curve[i].r + 'R, total ' + v + 'R</title></circle>'; }).join('') + '</svg>';
+  }
+  function accountPnl(r) {
+    var rows = st.accounts.map(function (a) {
+      var n = 0, pnl = 0, skipped = 0;
+      r.trades.forEach(function (t) {
+        var s = sym(t.symbol);
+        if (a.markets.indexOf(s.market) < 0) return;
+        if (t.mode === 'swing' && t.side === 'short' && s.market === 'NSE') { skipped++; return; }
+        var q = R.size(a, { entry: t.entry, stop: t.stop }).qty;
+        if (q < 1) { skipped++; return; }
+        n++; pnl += q * t.perShare;
+      });
+      return '<tr><td><b>' + esc(a.label) + '</b><div class="faint" style="font-size:12px">' + R.money(a.capital, a.currency) + ' · risk ' + a.riskPct + '% a trade · exposure cap ' + a.maxExposurePct + '%</div></td><td class="r">' + n + '</td><td class="r">' + (skipped || '-') + '</td><td class="r ' + rcls(pnl) + '">' + R.money(Math.round(pnl * 100) / 100, a.currency) + '</td><td class="r ' + rcls(pnl) + '">' + (Math.round(pnl / a.capital * 10000) / 100) + '%</td></tr>';
+    }).join('');
+    return '<div class="pd-tbl-wrap"><table class="pd-tbl"><thead><tr><th>Account</th><th class="r">Trades</th><th class="r">Skipped</th><th class="r">Net after costs</th><th class="r">On capital</th></tr></thead><tbody>' + rows + '</tbody></table></div><p class="faint" style="font-size:12px">Each account sizes every trade from its own capital and risk (Accounts &amp; orders). NSE swing shorts are skipped for cash accounts.</p>';
+  }
+
+  // ------------------------------------------------------------------ accounts & orders
+  function allSignals() {
+    var out = [];
+    S.symbols.forEach(function (s) {
+      ['day', 'swing'].forEach(function (m) { B.runSymbol(S, s, m, st.cfg[m], st.bt).signals.forEach(function (x) { out.push(x); }); });
+    });
+    if (st.tvResult && st.tvResult.ok) out.unshift(st.tvResult.signal);
+    return out.sort(function (a, b) { return (b.day + b.time) < (a.day + a.time) ? -1 : 1; });
+  }
+  function nowFor(sig) { var s = sym(sig.symbol); return sig.day + 'T' + sig.time + ':30' + S.sessions[s.market].utc_offset; }
+  function prevDay(d) { var t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - 1); return t.toISOString().slice(0, 10); }
+  /* The server's morning job logs every account in before the open. In the demo it runs on every session
+     day unless you untick it; then the account is left with yesterday's token. */
+  function sessioned(sig) {
+    return st.accounts.map(function (a) {
+      var c = JSON.parse(JSON.stringify(a)), day = a.loginRan === false ? prevDay(sig.day) : sig.day;
+      c.session = Object.assign({}, c.session, { issuedAt: day + (a.broker === 'ibkr' ? 'T08:30:00-04:00' : 'T08:50:00+05:30'), authenticated: a.loginRan !== false || a.broker !== 'ibkr' ? true : false });
+      if (a.broker === 'ibkr' && a.loginRan === false) c.session.authenticated = false;
+      return c;
+    });
+  }
+  function viewAccounts() {
+    var sigs = allSignals();
+    if (!st.sigSel || !sigs.some(function (x) { return x.id === st.sigSel; })) st.sigSel = sigs.length ? sigs[0].id : null;
+    var sig = sigs.filter(function (x) { return x.id === st.sigSel; })[0];
+    var html = '<div class="pd-view"><h1>One signal, three accounts</h1><p class="lead">Each account decides for itself: is this market mine, is my session alive, am I inside my limits, how many shares does my capital and risk allow. Then it builds the exact request for its broker. Paper mode builds and logs them; live mode sends them from the server.</p>';
+    html += '<div class="pd-grid pd-g3" style="margin-bottom:14px">' + st.accounts.map(function (a, i) {
+      var ses = sig ? R.sessionOk(sessioned(sig)[i], nowFor(sig)) : { ok: false, reason: '' };
+      var india = a.broker !== 'ibkr';
+      return '<div class="pd-acct"><div class="pd-row" style="justify-content:space-between"><h3>' + esc(a.label) + '</h3><label class="pd-row" style="gap:4px;font-size:12.5px"><input type="checkbox" data-acc="enabled" data-i="' + i + '"' + (a.enabled ? ' checked' : '') + '>on</label></div>' +
+        '<div class="faint" style="font-size:12px;margin-bottom:8px">' + esc(a.owner) + ' · trades ' + a.markets.join(', ') + ' · ' + (india ? 'products ' + a.productDay + ' / ' + a.productSwing : 'tif ' + a.productDay + ' / ' + a.productSwing) + '</div>' +
+        '<div class="pd-two"><label class="pd-field">Capital (' + a.currency + ')<input type="number" data-acc="capital" data-i="' + i + '" value="' + a.capital + '" step="1000" min="0"></label><label class="pd-field">Risk % a trade<input type="number" data-acc="riskPct" data-i="' + i + '" value="' + a.riskPct + '" step="0.05" min="0"></label>' +
+        '<label class="pd-field">Max open<input type="number" data-acc="maxOpen" data-i="' + i + '" value="' + a.maxOpen + '" min="0"></label><label class="pd-field">Exposure cap %<input type="number" data-acc="maxExposurePct" data-i="' + i + '" value="' + a.maxExposurePct + '" min="1" max="500"></label></div>' +
+        (india ? '<label class="pd-row" style="gap:6px;font-size:12.5px;margin-bottom:6px"><input type="checkbox" data-acc="staticIpRegistered" data-i="' + i + '"' + (a.staticIpRegistered ? ' checked' : '') + '>Server\'s static IP registered with ' + (a.broker === 'zerodha' ? 'Kite Connect' : 'SmartAPI') + '</label>' : '') +
+        '<div class="pd-row" style="justify-content:space-between"><label class="pd-row" style="gap:6px;font-size:12.5px"><input type="checkbox" data-acc="loginRan" data-i="' + i + '"' + (a.loginRan !== false ? ' checked' : '') + '>' + (a.broker === 'zerodha' ? 'Morning Kite login ran' : a.broker === 'angel' ? 'Morning TOTP login ran' : 'Gateway re-auth ran') + '</label><span class="pd-chip ' + (ses.ok ? 'ok' : 'err') + '">' + (ses.ok ? 'session live' : 'session expired') + '</span></div>' +
+        (ses.ok ? '' : '<div class="faint" style="font-size:12px;margin-top:6px">' + esc(ses.reason) + '</div>') + '</div>';
+    }).join('') + '</div>';
+    if (!sig) return html + '<p class="muted">No signals with the current settings.</p></div>';
+    html += '<div class="pd-side"><div class="pd-card"><label class="pd-field">Signal<select data-bind="sigSel">' + sigs.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === st.sigSel ? ' selected' : '') + '>' + esc((x.source === 'tradingview' ? 'TV alert · ' : '') + prettyDay(x.day) + ' ' + x.time + ' · ' + x.symbol + ' · ' + x.side + ' · ' + x.mode) + '</option>'; }).join('') + '</select></label>' +
+      '<div class="mono" style="font-size:12.5px;line-height:1.7">' + esc(sig.reason) + '<br>entry ' + px(sig.entry, sig.market) + ' · stop ' + px(sig.stop, sig.market) + ' · target ' + px(sig.target, sig.market) + ' · ' + sig.rr + 'R</div>' +
+      '<h4 class="pd-h">Try to break it</h4><div class="faint" style="font-size:12.5px">Untick a static IP or a morning login, press the kill switch, set a capital too small for one share, route the same signal twice, or pick a swing short on an NSE stock.</div>' +
+      '<div class="pd-row" style="margin-top:12px"><button class="pd-btn pri" data-act="sendpaper">Send (paper)</button><button class="pd-btn sm" data-act="resetpaper">Reset paper state</button></div>' +
+      '<h4 class="pd-h">Paper journal (' + st.journal.length + ')</h4>' + (st.journal.length ? st.journal.slice().reverse().slice(0, 8).map(function (j) { return '<div style="font-size:12.5px;margin-bottom:6px"><span class="faint">' + esc(j.at) + '</span> ' + esc(j.text) + '</div>'; }).join('') : '<div class="faint" style="font-size:12.5px">Nothing sent yet.</div>') + '</div><div>';
+    var dec = R.route(sig, sym(sig.symbol), sessioned(sig), st.router, nowFor(sig));
+    st.lastDecisions = { sig: sig, dec: dec };
+    html += dec.map(function (d) {
+      return '<div class="pd-dec ' + (d.take ? 'take' : 'skip') + '"><div class="pd-row" style="justify-content:space-between"><b>' + esc(d.label) + '</b>' + (d.take ? '<span class="pd-chip ok">takes it: ' + d.size.qty + ' shares</span>' : '<span class="pd-chip err">skips it</span>') + '</div>' +
+        (d.take ? '<div class="muted" style="font-size:12.5px;margin:6px 0">Risk ' + R.money(d.size.riskAmount, d.currency) + ' of a ' + R.money(d.size.riskBudget, d.currency) + ' budget · position ' + R.money(d.size.positionValue, d.currency) + (d.size.cappedByExposure ? ' · cut to the exposure cap' : '') + '</div>' +
+          d.orders.map(function (o) { return '<details style="margin-top:6px"' + (d.orders.indexOf(o) === 0 ? ' open' : '') + '><summary style="cursor:pointer;font-size:12.5px">' + esc(o.label) + ' · <span class="mono">' + esc(o.method + ' ' + o.url) + '</span></summary><pre class="pd-code" style="margin-top:6px">' + esc(JSON.stringify(o.form || o.json, null, 2)) + '</pre></details>'; }).join('')
+          : '<ul style="margin:6px 0 0;padding-left:18px;color:#ffb3b3;font-size:13px">' + d.reasons.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>') + '</div>';
+    }).join('');
+    return html + '</div></div></div>';
+  }
+
+  // ------------------------------------------------------------------ TradingView
+  function viewTv() {
+    var sigs = allSignals().filter(function (x) { return x.source !== 'tradingview'; });
+    if (!st.tvText && sigs.length) st.tvText = T.examplePayload(sigs[0], st.secret, sym(sigs[0].symbol));
+    var res = st.tvResult;
+    var html = '<div class="pd-view"><h1>TradingView: charts and alert triggers</h1><p class="lead">TradingView doesn\'t offer a market-data API for this, so the engine reads prices from your brokers\' own feeds (Kite Ticker, SmartAPI WebSocket, IBKR market data) and TradingView does what it is best at: your charts, and an alert that fires when the indicator below sees a double top or bottom break. The webhook lands on the server, which checks it and routes it through the same rules as a backtested signal.</p>' +
+      '<div class="pd-grid pd-g2"><div><div class="pd-card"><h4 class="pd-h" style="margin-top:0">Alert setup</h4><div style="font-size:13px;line-height:1.7">1. Add the indicator below to each chart (Pine Script v6).<br>2. One alert per chart: condition <b>Any alert() function call</b>, <b>Once per bar close</b>.<br>3. Webhook URL: <span class="mono">https://&lt;your-server&gt;/tv</span><br>4. Put this secret in the indicator\'s hidden input: <span class="mono">' + esc(st.secret) + '</span></div>' +
+      '<div class="pd-banner info" style="margin:10px 0 0">Webhooks need a paid TradingView plan with two-factor sign-in turned on. TradingView waits about 3 seconds and never retries, so the server answers first and works after. Plans without open-ended alerts need the alerts renewed before they expire.</div></div>' +
+      '<h4 class="pd-h">The indicator (built from your current settings)</h4><div class="pd-row" style="margin-bottom:6px"><button class="pd-btn sm" data-act="copypine">Copy the Pine Script</button><span class="faint" style="font-size:12px">Not yet compiled in TradingView; milestone 2 checks it on your charts.</span></div><pre class="pd-code" id="pine">' + esc(T.pine(cfg())) + '</pre></div>' +
+      '<div><div class="pd-card"><h4 class="pd-h" style="margin-top:0">Send a test alert to the server</h4><div class="faint" style="font-size:12.5px;margin-bottom:6px">This is the JSON the indicator sends. Edit it, then send: wrong secret, a symbol off the watchlist, levels that are not a pattern, or the same alert twice are all refused with the reason.</div>' +
+      '<label class="pd-field">Pick a signal to turn into an alert<select data-bind="tvpick"><option value="">…</option>' + sigs.slice(0, 40).map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(prettyDay(x.day) + ' ' + x.time + ' ' + x.symbol + ' ' + x.side + ' ' + x.mode) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="pd-field">Webhook body<textarea id="tvtext" rows="14">' + esc(st.tvText) + '</textarea></label><div class="pd-row"><button class="pd-btn pri" data-act="tvsend">Send to the server</button><button class="pd-btn sm" data-act="tvbreak" data-arg="secret">wrong secret</button><button class="pd-btn sm" data-act="tvbreak" data-arg="symbol">unknown symbol</button><button class="pd-btn sm" data-act="tvbreak" data-arg="levels">bad levels</button></div></div>';
+    if (res) {
+      if (!res.ok) html += '<div class="pd-banner err" style="margin-top:12px"><b>Refused.</b><ul style="margin:6px 0 0;padding-left:18px">' + res.errors.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul></div>';
+      else {
+        var dec = R.route(res.signal, sym(res.signal.symbol), sessioned(res.signal), st.router, nowFor(res.signal));
+        html += '<div class="pd-banner ok" style="margin-top:12px"><b>Accepted.</b> ' + esc(res.signal.reason) + ': ' + res.signal.side + ' at ' + px(res.signal.entry, res.signal.market) + ', stop ' + px(res.signal.stop, res.signal.market) + ', target ' + px(res.signal.target, res.signal.market) + ' (recomputed with your rules).</div>' +
+          dec.map(function (d) { return '<div class="pd-dec ' + (d.take ? 'take' : 'skip') + '"><b>' + esc(d.label) + '</b> ' + (d.take ? '<span class="pd-chip ok">' + d.size.qty + ' shares</span>' : '<span class="pd-chip err">skips</span> <span class="muted" style="font-size:12.5px">' + esc(d.reasons[0]) + '</span>') + '</div>'; }).join('') +
+          '<button class="pd-btn sm" data-act="tab" data-arg="accounts">See the full orders in Accounts &amp; orders</button>';
+      }
+    }
+    return html + '</div></div></div>';
+  }
+
+  // ------------------------------------------------------------------ how it is built
+  function viewBuilt() {
+    var box = function (x, y, w, h, t, sub, c) { return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="8" fill="#151b23" stroke="' + (c || '#2c3747') + '" stroke-width="1.4"/><text x="' + (x + 10) + '" y="' + (y + 20) + '" font-size="13" font-weight="700" fill="#e6edf3">' + t + '</text>' + sub.split('|').map(function (l, i) { return '<text x="' + (x + 10) + '" y="' + (y + 38 + i * 15) + '" font-size="11.5" fill="#93a1b0">' + l + '</text>'; }).join(''); };
+    var ar = function (x1, y1, x2, y2, l) { return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#5b6878" stroke-width="1.3" marker-end="url(#a)"/>' + (l ? '<text x="' + (x1 + 6) + '" y="' + (Math.min(y1, y2) - 5) + '" font-size="10.5" fill="#93a1b0">' + l + '</text>' : ''); };
+    var svg = '<svg class="pd-arch" viewBox="0 0 1000 430" role="img" aria-label="Architecture"><defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#5b6878"/></marker></defs>' +
+      box(10, 30, 210, 80, 'TradingView', 'your charts + the indicator|alert on pattern break|webhook (2FA, paid plan)') +
+      box(10, 160, 210, 80, 'Broker data feeds', 'Kite Ticker, SmartAPI WebSocket|IBKR market data|15-day history for the backtest') +
+      box(10, 300, 210, 90, 'Morning login (cron)', 'Kite: login + request token|SmartAPI: PIN + TOTP|IBKR: gateway re-auth + tickle') +
+      '<rect x="270" y="20" width="420" height="390" rx="12" fill="#0f1620" stroke="#23405f"/><text x="286" y="42" font-size="12" font-weight="800" fill="#4ea1ff">YOUR VPS (STATIC IP, REGISTERED WITH ZERODHA AND ANGEL ONE)</text>' +
+      box(290, 60, 380, 70, 'Webhook + engine (src/)', 'answers TradingView in milliseconds|patterns.js: double top / bottom, day and swing') +
+      box(290, 150, 380, 70, 'Risk and sizing (router.js)', 'kill switch, daily loss, max open, market hours|size from each account\'s capital and risk %') +
+      box(290, 240, 380, 70, 'Order adapters', 'Kite: LIMIT + SL-M / GTT OCO · SmartAPI: NORMAL + STOPLOSS|IBKR: one bracket (parent + 2 children)') +
+      box(290, 330, 380, 60, 'Journal + alerts', 'every decision with its reason; Telegram on fills and refusals') +
+      box(740, 60, 250, 70, 'Zerodha', 'Kite Connect API|MIS / CNC, NSE') +
+      box(740, 170, 250, 70, 'Angel One', 'SmartAPI|INTRADAY / DELIVERY, NSE') +
+      box(740, 280, 250, 70, 'Interactive Brokers', 'Web API via the gateway|US stocks and ETFs') +
+      ar(220, 70, 290, 90, 'alert') + ar(220, 200, 290, 110, 'bars') + ar(220, 345, 290, 280, 'sessions') + ar(480, 130, 480, 150) + ar(480, 220, 480, 240) + ar(670, 265, 740, 95) + ar(670, 275, 740, 205) + ar(670, 285, 740, 315) + ar(480, 310, 480, 330) +
+      '</svg>';
+    var tree = 'pattern-desk/\n  src/patterns.js     pivots, double top / bottom, signals (no lookahead)\n  src/backtest.js     15-day backtest: stops, targets, square-off, costs, stats\n  src/router.js       per-account checks, sizing, Kite / SmartAPI / IBKR requests\n  src/tvAlert.js      Pine Script v6 indicator + webhook parser\n  server/server.js    POST /tv, paper / live, kill switch, journal\n  server/lib.js       TOTP (RFC 6238), Kite checksum, sending, morning logins\n  server/config.example.json\n  tests/verify.js     engine checks      tests/server.test.js   server checks\n  tests/browser-check.py                 this page';
+    return '<div class="pd-view"><h1>How it is built</h1><p class="lead">One engine, three brokers. What you clicked through on this page is the same code the server runs.</p><div class="pd-card">' + svg + '</div>' +
+      '<div class="pd-grid pd-g2" style="margin-top:14px;align-items:start"><div><h4 class="pd-h" style="margin-top:0">Under the hood</h4><pre class="pd-code">' + esc(tree) + '</pre>' +
+      '<p class="muted" style="font-size:13px">The node tests, the server and this page load the same <span class="mono">src/</span> files, so a rule tested here is the rule that trades. Hand <span class="mono">src/</span> and <span class="mono">tests/</span> to your developer, or never open them.</p>' +
+      '<div class="pd-row"><a class="pd-btn pri" href="downloads/pattern-desk.zip" download>Download the code (zip)</a><span class="faint" style="font-size:12.5px">' + esc(TESTS) + '</span></div></div>' +
+      '<div><h4 class="pd-h" style="margin-top:0">Already running in production</h4><div class="pd-card" style="font-size:13.5px;line-height:1.6">I run a live TradingView-to-alerts engine for a US day trader on SPY and QQQ, on a server since 28 October: TradingView sends every 5-minute bar to it by webhook, fixed rules grade each setup, and alerts go out by Telegram and SMS with entry, stop and targets. Rule changes are replayed on past days before they go live, the same way the backtest here works. That engine sends alerts only; this one adds the order side for your three brokers.</div>' +
+      '<h4 class="pd-h">Your list, mapped</h4><div class="pd-tbl-wrap"><table class="pd-tbl"><tbody>' +
+      [['Connect and manage IBKR, Angel and Zerodha in one system', 'Accounts & orders: one signal, per-account checks, sizing and the exact API requests'], ['Double top and double bottom strategies', 'Strategy & chart: found bar by bar, every setting live'], ['Day trading and swing trading', 'Day on 5-minute bars, flat by the close; swing on 60-minute bars across sessions'], ['TradingView for charting and alerts', 'Pine Script v6 indicator + webhook parser with secret, duplicate and staleness checks'], ['Working code, API integration, documentation', 'The zip: engine, server, adapters, tests, README'], ['Backtesting on 15 days of history', 'Backtest: costs, slippage, square-off, per account in its own currency']].map(function (r) { return '<tr><td>' + esc(r[0]) + '</td><td class="muted">' + esc(r[1]) + '</td></tr>'; }).join('') + '</tbody></table></div></div></div>' +
+      '<div class="pd-card" style="margin-top:14px"><b>Honest status.</b> <span class="muted">The engine, the backtest, the router and the server run and pass their tests today. The broker requests are written against the current Kite Connect, SmartAPI and IBKR Web API docs and tested against a fake broker; none has been sent to a real account yet. Milestone 3 proves each broker on your account with a one-share order first. The SmartAPI stop-order values are the ones to confirm on your account. Nothing here is investment advice.</span></div></div>';
+  }
+
+  // ------------------------------------------------------------------ offer
+  function viewOffer() {
+    var ms = [['1', 'Strategy engine and 15-day backtest', '$600', 'Week 1', 'Double top and bottom, day and swing, on your symbols and your broker\'s history.', 'The backtest runs on 15 days of your own data and you can check every trade on the chart.'],
+      ['2', 'TradingView alerts and the paper desk', '$500', 'Week 2', 'The indicator on your charts, the webhook server on a static-IP VPS, paper orders for every account.', 'A week of live alerts lands in the paper journal with sizes for each account, nothing sent to a broker.'],
+      ['3', 'Broker connections', '$900', 'Week 2-3', 'Zerodha, Angel One and IBKR with morning logins, sizing, daily loss limits and the kill switch.', 'One 1-share live order per account goes in with its stop and target, and the kill switch stops all three.'],
+      ['4', 'Go-live and documentation', '$400', 'Week 3', 'A full live day with your limits, the docs, and 14 days of support.', 'You have run a live day and the docs cover changing settings, adding a symbol and the daily login.']];
+    return '<div class="pd-view"><h1>Prices and milestones</h1><p class="lead">Fixed prices, paid by milestone, each with a test you can check yourself. You own the code.</p><div class="pd-tiers" style="margin-top:18px">' +
+      '<div class="pd-tier"><h3>Strategy and backtest</h3><div class="price">$1,200</div><div class="faint">about 1 week</div><ul><li>Pattern engine, day and swing</li><li>15-day backtest on your data</li><li>TradingView indicator and alerts</li><li>Paper desk for one broker</li><li>7 days of support</li></ul></div>' +
+      '<div class="pd-tier feat"><span class="tag">BEST VALUE</span><h3>Full system, three brokers</h3><div class="price">$2,400</div><div class="faint">about 3 weeks · <span class="pd-strike">worth $4,500 bought separately</span></div><ul><li>Everything on this page, on your accounts</li><li>Zerodha, Angel One and IBKR live, with sizing and risk limits</li><li>Morning logins handled (Kite token, SmartAPI TOTP, IBKR gateway)</li><li>Static-IP server set up and registered</li><li><b>Bonus:</b> Telegram alerts for every fill and refusal</li><li><b>Bonus:</b> your first 15 days of history loaded and backtested</li><li><b>Bonus:</b> 14 days of support after go-live</li></ul></div>' +
+      '<div class="pd-tier"><h3>System + strategy tuning</h3><div class="price">$3,900</div><div class="faint">about 5 weeks</div><ul><li>Everything in the full system</li><li>Two more patterns of your choice (for example head and shoulders, flags)</li><li>A walk-forward test on more history</li><li>A month of weekly reviews of live results</li><li>30 days of support</li></ul></div></div>' +
+      '<h4 class="pd-h">Full system: milestones</h4><div class="pd-tbl-wrap"><table class="pd-tbl"><thead><tr><th>#</th><th>Milestone</th><th>Price</th><th>When</th><th>You get</th><th>Done when</th></tr></thead><tbody>' + ms.map(function (m) { return '<tr><td>' + m[0] + '</td><td><b>' + m[1] + '</b></td><td>' + m[2] + '</td><td style="white-space:nowrap">' + m[3] + '</td><td>' + esc(m[4]) + '</td><td>' + esc(m[5]) + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      '<h4 class="pd-h">What the $2,400 replaces</h4><div class="pd-tbl-wrap"><table class="pd-tbl"><tbody>' + [['Pattern engine, day and swing', '$900'], ['15-day backtest with costs and charts', '$600'], ['TradingView indicator and webhook server', '$500'], ['Three broker adapters with sizing and risk controls', '$1,500'], ['Static-IP server and morning login automation', '$400'], ['Documentation and walkthrough', '$300'], ['14 days of support', '$300'], ['<b>Total</b>', '<b class="pd-strike">$4,500</b>']].map(function (r) { return '<tr><td>' + r[0] + '</td><td class="r">' + r[1] + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      '<div class="pd-grid pd-g2" style="margin-top:14px"><div class="pd-card"><b>What I need from you to start</b><ol style="margin:8px 0 0;padding-left:18px;color:#c9d4df"><li>Your symbols and which account trades which</li><li>API access: a Kite Connect app, SmartAPI keys and TOTP set up, an IBKR account with API access</li><li>Your risk per trade, daily loss limit and position limits per account</li><li>A TradingView plan with webhooks (I set up the alerts with you on a call)</li></ol></div>' +
+      '<div class="pd-cta"><h3 style="margin:0 0 6px">Send me your symbols</h3><div style="color:#cfe9df">Tell me which stocks or ETFs you trade and on which account, and I will load 15 days of real history for them and send you the backtest before you pay anything. I can start this week.</div></div></div>' +
+      '<div class="pd-scope"><b>Honest scope.</b> Built from your Upwork post. Prices are synthetic and the accounts are examples; no real trading or client data is shown. The engine and its passing tests are real (' + esc(TESTS) + '). Broker requests are built but not sent: nothing here is connected to Zerodha, Angel One, IBKR or TradingView, and the delivered system runs on your accounts with access you give during the build. Backtest results on synthetic prices are not a forecast, and nothing here is investment advice. This link will be taken down about 30 days after it was sent.<br>Built by Taiwo, Pathfinder Automation Solutions.</div></div>';
+  }
+
+  // ------------------------------------------------------------------ events
+  function after() {
+    var ta = document.getElementById('tvtext');
+    if (ta) ta.addEventListener('input', function () { st.tvText = ta.value; });
+  }
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-act]'); if (!el) return;
+    var act = el.getAttribute('data-act'), arg = el.getAttribute('data-arg');
+    if (act === 'tab') { st.tab = arg; render(); window.scrollTo(0, 0); }
+    else if (act === 'kill') { st.router.killSwitch = !st.router.killSwitch; st.journal.push({ at: new Date().toISOString().slice(11, 19), text: 'Kill switch ' + (st.router.killSwitch ? 'ON: no new orders on any account' : 'off') }); render(); toast(st.router.killSwitch ? 'Kill switch on: every account refuses new orders' : 'Kill switch off'); }
+    else if (act === 'resetcfg') { st.cfg[st.mode] = P.defaultsFor(st.mode); render(); }
+    else if (act === 'opentrade') { var t = (st.lastBt.trades || []).filter(function (x) { return x.id === arg; })[0]; if (t) { st.symbol = t.symbol; st.day = t.entryDay; st.tab = 'lab'; render(); window.scrollTo(0, 0); } }
+    else if (act === 'sendpaper') {
+      var ld = st.lastDecisions; if (!ld) return;
+      var takers = ld.dec.filter(function (d) { return d.take; });
+      R.record(st.router, ld.dec, ld.sig);
+      st.journal.push({ at: new Date().toISOString().slice(11, 19), text: ld.sig.symbol + ' ' + ld.sig.side + ': ' + (takers.length ? takers.map(function (d) { return d.label.split(' (')[0] + ' ' + d.size.qty; }).join(', ') : 'no account took it') + ' (paper: ' + takers.reduce(function (n, d) { return n + d.orders.length; }, 0) + ' requests logged, none sent)' });
+      toast(takers.length ? 'Logged ' + takers.length + ' account' + (takers.length > 1 ? 's' : '') + ' in paper. Send again and it is refused.' : 'No account took it: see the reasons.');
+      render();
+    }
+    else if (act === 'resetpaper') { st.router = { killSwitch: false, open: {}, dayLoss: {}, routed: {} }; st.journal = []; render(); }
+    else if (act === 'copypine') { var txt = document.getElementById('pine').textContent; if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast('Pine Script copied'); }, function () { toast('Select the code and copy it'); }); }
+    else if (act === 'tvsend') { st.tvText = document.getElementById('tvtext').value; st.tvResult = T.parse(st.tvText, { secret: st.secret, symbols: S.symbols, cfg: st.cfg[(function () { try { return JSON.parse(st.tvText).mode === 'swing' ? 'swing' : 'day'; } catch (x) { return 'day'; } })()], seen: st.tvSeen }); if (st.tvResult.ok) st.sigSel = st.tvResult.signal.id; render(); }
+    else if (act === 'tvbreak') {
+      try { var j = JSON.parse(document.getElementById('tvtext').value); if (arg === 'secret') j.secret = 'not-the-secret'; if (arg === 'symbol') { j.symbol = 'TSLA'; j.id = 'x-' + Date.now(); } if (arg === 'levels') { j.close = j.extreme * (j.side === 'short' ? 1.01 : 0.99); j.id = 'y-' + Date.now(); } st.tvText = JSON.stringify(j, null, 2); } catch (x) { }
+      render();
+    }
+  });
+  document.addEventListener('change', function (e) {
+    var el = e.target, b = el.getAttribute('data-bind'), c = el.getAttribute('data-cfg'), bt = el.getAttribute('data-bt'), ac = el.getAttribute('data-acc');
+    if (b === 'symbol') { st.symbol = el.value; pickDayWithSignal(); render(); }
+    else if (b === 'mode') { st.mode = el.value; render(); }
+    else if (b === 'day') { st.day = el.value; render(); }
+    else if (b === 'sigSel') { st.sigSel = el.value; render(); }
+    else if (b === 'btsym') { var cur = st.bt.symbols || S.symbols.map(function (x) { return x.symbol; }); cur = el.checked ? cur.concat([el.value]) : cur.filter(function (x) { return x !== el.value; }); st.bt.symbols = cur; render(); }
+    else if (b === 'tvpick') { var sg = allSignals().filter(function (x) { return x.id === el.value; })[0]; if (sg) { st.tvText = T.examplePayload(sg, st.secret, sym(sg.symbol)); st.tvResult = null; render(); } }
+    else if (c) { var v = el.tagName === 'SELECT' ? el.value : Number(el.value); if (el.tagName !== 'SELECT' && (!isFinite(v) || v < 0)) { toast('That setting needs a number of 0 or more'); render(); return; } st.cfg[st.mode][c] = v; render(); }
+    else if (bt) { var n = Number(el.value); if (!isFinite(n) || n < 0) { toast('Costs and slippage must be 0 or more'); render(); return; } st.bt[bt] = n; render(); }
+    else if (ac) { var a = st.accounts[+el.getAttribute('data-i')]; if (el.type === 'checkbox') a[ac] = el.checked; else { var nv = Number(el.value); if (!isFinite(nv) || nv < 0) { toast('Use a number of 0 or more'); render(); return; } a[ac] = nv; } render(); }
+  });
+  window.__pd = { st: st, render: render };
+  boot();
+})();
+</script>
+</body>
+</html>

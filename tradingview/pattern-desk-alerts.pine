@@ -1,0 +1,99 @@
+//@version=6
+// Pattern Desk: double top / double bottom alerts for the Pattern Desk server.
+// Create ONE alert on this indicator: condition "Any alert() function call", "Once per bar close", webhook URL = your server /tv.
+// The secret input is hidden from the chart legend. Not yet compiled in TradingView: milestone 2 checks it on your charts.
+indicator("Pattern Desk alerts", overlay = true, max_bars_back = 500, max_labels_count = 200)
+
+pivotLen = input.int(3, "Pivot bars each side", minval = 1)
+tolPct   = input.float(0.35, "Tops within %", step = 0.05)
+minGap   = input.int(6, "Min bars between tops", minval = 2)
+maxGap   = input.int(40, "Max bars between tops")
+minDepth = input.float(0.35, "Min neckline depth %", step = 0.05)
+maxWait  = input.int(18, "Bars to break the neckline")
+volMult  = input.float(1.2, "Breakout volume x 20-bar average (0 = off)", step = 0.1)
+mode     = input.string("day", "Mode", options = ["day", "swing"])
+secret   = input.string("", "Webhook secret", display = display.none)
+
+ph = ta.pivothigh(high, pivotLen, pivotLen)
+pl = ta.pivotlow(low, pivotLen, pivotLen)
+avgVol = ta.sma(volume, 20)[1]
+
+var float h1 = na
+var int   h1i = na
+var float l1 = na
+var int   l1i = na
+var float topNeck = na
+var float topExt = na
+var float topSwing = na
+var int   topArmed = na
+var float botNeck = na
+var float botExt = na
+var float botSwing = na
+var int   botArmed = na
+
+send(string kind, string side, float neck, float ext, float swingLvl) =>
+    msg = '{"secret":"' + secret + '","strategy":"' + kind + '","symbol":"' + syminfo.ticker + '","exchange":"' + syminfo.prefix + '","tf":"' + timeframe.period + '","mode":"' + mode + '","side":"' + side + '","close":' + str.tostring(close) + ',"neckline":' + str.tostring(neck) + ',"extreme":' + str.tostring(ext) + ',"swing":' + str.tostring(swingLvl) + ',"volume":' + str.tostring(volume) + ',"avgVolume":' + str.tostring(nz(avgVol)) + ',"time":' + str.tostring(time_close) + ',"id":"' + syminfo.ticker + "-" + str.tostring(time_close) + "-" + kind + '"}'
+    alert(msg, alert.freq_once_per_bar_close)
+
+// 1. a new swing high: does it make a double top with the previous one?
+if not na(ph)
+    p2i = bar_index - pivotLen
+    if not na(h1) and p2i - h1i >= minGap and p2i - h1i <= maxGap and math.abs(ph - h1) / h1 * 100 <= tolPct
+        ext = math.max(ph, h1)
+        neck = low[pivotLen + 1]
+        poke = false
+        for k = pivotLen + 1 to bar_index - h1i - 1
+            neck := math.min(neck, low[k])
+            poke := poke or high[k] > ext
+        if not poke and (ext - neck) / ext * 100 >= minDepth and close > neck
+            topNeck := neck
+            topExt := ext
+            topSwing := na
+            topArmed := bar_index
+    h1 := ph
+    h1i := p2i
+
+if not na(pl)
+    q2i = bar_index - pivotLen
+    if not na(l1) and q2i - l1i >= minGap and q2i - l1i <= maxGap and math.abs(pl - l1) / l1 * 100 <= tolPct
+        ext2 = math.min(pl, l1)
+        neck2 = high[pivotLen + 1]
+        poke2 = false
+        for k = pivotLen + 1 to bar_index - l1i - 1
+            neck2 := math.max(neck2, high[k])
+            poke2 := poke2 or low[k] < ext2
+        if not poke2 and (neck2 - ext2) / ext2 * 100 >= minDepth and close < neck2
+            botNeck := neck2
+            botExt := ext2
+            botSwing := na
+            botArmed := bar_index
+    l1 := pl
+    l1i := q2i
+
+// 2. armed patterns: break, cancel or expire on the bar close
+volOk = volMult <= 0 or volume >= volMult * avgVol
+if not na(topArmed) and bar_index > topArmed
+    if close > topExt
+        topArmed := na
+    else if close < topNeck
+        if volOk
+            send("double_top", "short", topNeck, topExt, na(topSwing) ? topExt : topSwing)
+            label.new(bar_index, high, "DT", style = label.style_label_down, color = color.red, textcolor = color.white)
+        topArmed := na
+    else if bar_index - topArmed > maxWait
+        topArmed := na
+    else
+        topSwing := na(topSwing) ? high : math.max(topSwing, high)
+
+if not na(botArmed) and bar_index > botArmed
+    if close < botExt
+        botArmed := na
+    else if close > botNeck
+        if volOk
+            send("double_bottom", "long", botNeck, botExt, na(botSwing) ? botExt : botSwing)
+            label.new(bar_index, low, "DB", style = label.style_label_up, color = color.green, textcolor = color.white)
+        botArmed := na
+    else if bar_index - botArmed > maxWait
+        botArmed := na
+    else
+        botSwing := na(botSwing) ? low : math.min(botSwing, low)

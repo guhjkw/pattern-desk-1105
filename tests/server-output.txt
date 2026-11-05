@@ -1,0 +1,29 @@
+
+1. login helpers
+PASS 1.1 TOTP matches RFC 6238 (T=59)
+PASS 1.2 TOTP matches RFC 6238 (T=1111111109, T=1234567890)
+PASS 1.3 Kite checksum is sha256(api_key + request_token + api_secret)
+PASS 1.4 SmartAPI login sends client code, PIN and the current TOTP
+
+2. webhook in paper mode
+PASS 2.1 health says paper mode
+PASS 2.2 TradingView gets its 200 straight away
+PASS 2.3 the SPY alert routes to IBKR only, in paper
+PASS 2.4 the same alert again is refused as a duplicate
+PASS 2.5 a wrong secret is refused (and still gets a fast answer)
+PASS 2.6 the journal needs the admin token
+PASS 2.7 an oversized body is refused
+PASS 2.8 the RELIANCE alert routes to Zerodha and Angel One
+PASS 2.9 an alert that arrives 30 minutes late is not traded
+PASS 2.10 the kill switch needs the admin token
+PASS 2.11 after the kill switch every account refuses
+
+3. live mode against a fake broker
+PASS 3.1 Zerodha: form-encoded POST /orders/regular with "token key:access_token"
+PASS 3.2 Zerodha body: RELIANCE, NSE, the signal's side, LIMIT, MIS, quantity from the risk rules
+PASS 3.3 Angel One: JSON placeOrder with bearer JWT, API key and the static IP header
+PASS 3.4 the broker answers are kept in the journal
+PASS 3.5 IBKR: one bracket POST with the parent and two children
+PASS 3.6 secrets never reach the journal
+
+21 passed, 0 failed

@@ -1,0 +1,179 @@
+{
+ "_note": "Example config. Real secrets come from environment variables (TV_SECRET, ADMIN_TOKEN) and the credential store, never this file.",
+ "mode": "paper",
+ "secret": "change-me",
+ "adminToken": "change-me-too",
+ "maxAlertAgeMs": 600000,
+ "pattern": {},
+ "symbols": [
+  {
+   "symbol": "RELIANCE",
+   "exchange": "NSE",
+   "market": "NSE",
+   "name": "Reliance Industries",
+   "currency": "INR",
+   "price": 1420.0,
+   "vol": 0.0009,
+   "tick": 0.05,
+   "avgvol": 42000,
+   "brokers": {
+    "zerodha": {
+     "tradingsymbol": "RELIANCE"
+    },
+    "angel": {
+     "tradingsymbol": "RELIANCE-EQ",
+     "symboltoken": "2885"
+    }
+   }
+  },
+  {
+   "symbol": "HDFCBANK",
+   "exchange": "NSE",
+   "market": "NSE",
+   "name": "HDFC Bank",
+   "currency": "INR",
+   "price": 1680.0,
+   "vol": 0.0008,
+   "tick": 0.05,
+   "avgvol": 36000,
+   "brokers": {
+    "zerodha": {
+     "tradingsymbol": "HDFCBANK"
+    },
+    "angel": {
+     "tradingsymbol": "HDFCBANK-EQ",
+     "symboltoken": "1333"
+    }
+   }
+  },
+  {
+   "symbol": "INFY",
+   "exchange": "NSE",
+   "market": "NSE",
+   "name": "Infosys",
+   "currency": "INR",
+   "price": 1530.0,
+   "vol": 0.001,
+   "tick": 0.05,
+   "avgvol": 30000,
+   "brokers": {
+    "zerodha": {
+     "tradingsymbol": "INFY"
+    },
+    "angel": {
+     "tradingsymbol": "INFY-EQ",
+     "symboltoken": "1594"
+    }
+   }
+  },
+  {
+   "symbol": "SPY",
+   "exchange": "ARCA",
+   "market": "US",
+   "name": "SPDR S&P 500 ETF",
+   "currency": "USD",
+   "price": 680.0,
+   "vol": 0.0006,
+   "tick": 0.01,
+   "avgvol": 520000,
+   "brokers": {
+    "ibkr": {
+     "conid": 756733,
+     "symbol": "SPY"
+    }
+   }
+  },
+  {
+   "symbol": "AAPL",
+   "exchange": "NASDAQ",
+   "market": "US",
+   "name": "Apple",
+   "currency": "USD",
+   "price": 268.0,
+   "vol": 0.0008,
+   "tick": 0.01,
+   "avgvol": 310000,
+   "brokers": {
+    "ibkr": {
+     "conid": 265598,
+     "symbol": "AAPL"
+    }
+   }
+  }
+ ],
+ "accounts": [
+  {
+   "id": "zerodha-main",
+   "broker": "zerodha",
+   "label": "Zerodha (Kite Connect)",
+   "owner": "Main account",
+   "currency": "INR",
+   "capital": 500000,
+   "riskPct": 0.5,
+   "maxOpen": 3,
+   "dailyLossPct": 1.5,
+   "markets": [
+    "NSE"
+   ],
+   "enabled": true,
+   "staticIpRegistered": true,
+   "session": {
+    "kind": "kite_access_token",
+    "issuedAt": "2026-11-02T08:52:00+05:30"
+   },
+   "productDay": "MIS",
+   "productSwing": "CNC",
+   "squareOff": "15:15",
+   "maxExposurePct": 60
+  },
+  {
+   "id": "angel-main",
+   "broker": "angel",
+   "label": "Angel One (SmartAPI)",
+   "owner": "Second account",
+   "currency": "INR",
+   "capital": 300000,
+   "riskPct": 0.75,
+   "maxOpen": 2,
+   "dailyLossPct": 2.0,
+   "markets": [
+    "NSE"
+   ],
+   "enabled": true,
+   "staticIpRegistered": true,
+   "session": {
+    "kind": "smartapi_jwt",
+    "issuedAt": "2026-11-02T08:53:00+05:30"
+   },
+   "productDay": "INTRADAY",
+   "productSwing": "DELIVERY",
+   "squareOff": "15:15",
+   "maxExposurePct": 60
+  },
+  {
+   "id": "ibkr-main",
+   "broker": "ibkr",
+   "label": "Interactive Brokers (Web API)",
+   "owner": "US account",
+   "currency": "USD",
+   "capital": 25000,
+   "riskPct": 0.5,
+   "maxOpen": 3,
+   "dailyLossPct": 1.5,
+   "markets": [
+    "US"
+   ],
+   "enabled": true,
+   "staticIpRegistered": null,
+   "session": {
+    "kind": "ibkr_gateway",
+    "issuedAt": "2026-11-02T08:30:00-05:00",
+    "accountId": "U1234567"
+   },
+   "productDay": "DAY",
+   "productSwing": "GTC",
+   "squareOff": "15:50",
+   "maxExposurePct": 60
+  }
+ ]
+}

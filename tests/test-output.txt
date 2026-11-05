@@ -1,0 +1,79 @@
+
+1. pattern engine on a hand-made double top
+PASS 1.1 one double top found and triggered
+PASS 1.2 entry is the breakout close, below the neckline
+PASS 1.3 stop above the entry, target below it
+PASS 1.4 the signal comes on the breakout bar, never earlier (no lookahead)
+PASS 1.5 the two tops are named in the reason
+PASS 1.6 a breakout on thin volume is skipped, with the reason
+PASS 1.7 tops 0.6% apart are not a double top at 0.35% tolerance
+PASS 1.8 ...but they are at 0.7% tolerance (settings change the answer)
+PASS 1.9 day mode: no new entries after the 14:45 cut-off
+PASS 1.10 "long only" ignores double tops
+PASS 1.11 the mirror image is a double bottom, long, same bar
+PASS 1.12 stop modes: tops > last swing for a short (tighter structural stop)
+
+2. on the 15 synthetic sessions
+PASS 2.1 15 sessions x 75 five-minute bars for NSE
+PASS 2.2 60-minute bars: 7 per NSE session (last one 15:15-15:30)
+PASS 2.3 aggregation keeps the high, low, volume and last close
+PASS 2.4 every signal is inside one session and before the cut-off
+PASS 2.5 every pattern ends with a status and a reason
+PASS 2.6 no lookahead: signals on the first 600 bars are the same with or without the later bars
+
+3. backtest
+PASS 3.1 runs all 5 symbols over 15 days
+PASS 3.2 stats add up: wins + losses = trades
+PASS 3.3 total R equals the sum of the trades
+PASS 3.4 day trades never cross a session
+PASS 3.5 exits are stop, target, square-off or session end, each named
+PASS 3.6 a stop exit loses about 1R or a bit more after costs
+PASS 3.7 costs and slippage lower the result
+PASS 3.8 switching off the volume check gives more trades
+PASS 3.9 one symbol only
+PASS 3.10 swing mode runs on 60-minute bars and can hold overnight
+PASS 3.11 equity curve ends at the total
+PASS 3.12 profit factor = gross wins / gross losses
+PASS 3.13 deterministic: same inputs, same result
+
+4. router: one signal, three accounts
+PASS 4.1 an NSE signal goes to Zerodha and Angel One, not IBKR
+PASS 4.2 Zerodha size: risk allows 303 shares, the 60% exposure cap makes it floor(₹300,000 / ₹1,454.75) = 206
+PASS 4.3 Angel One sizes from its own capital: floor(₹180,000 / ₹1,454.75) = 123
+PASS 4.3b with the cap at 100%, risk decides: floor(₹2,500 / ₹8.25) = 303
+PASS 4.4 Kite: LIMIT entry (MIS) + SL-M stop + LIMIT target, tagged
+PASS 4.5 Kite: exits are the opposite side
+PASS 4.6 SmartAPI: symbol token, INTRADAY, string quantities
+PASS 4.7 the marketable limit sits 2 ticks above the entry for a buy
+PASS 4.8 a US signal goes to IBKR only
+PASS 4.9 IBKR: one bracket request, parent cOID with two children (STP + LMT)
+PASS 4.10 IBKR size: risk allows 69, the exposure cap makes it floor($15,000 / $680.08) = 22
+
+5. router: the rules that block an order
+PASS 5.1 no registered static IP: Zerodha refuses (SEBI rule), Angel One still trades
+PASS 5.2 Kite token issued yesterday is dead after 6 AM IST
+PASS 5.3 a token issued before 6 AM expires at 6 AM the same day
+PASS 5.4 SmartAPI session from yesterday must log in again
+PASS 5.4b a login stamped after the signal does not count
+PASS 5.5 kill switch blocks every account
+PASS 5.6 daily loss limit reached: that account stops
+PASS 5.7 max open positions respected
+PASS 5.8 the same signal never goes in twice
+PASS 5.9 NSE swing short refused: cash equity cannot be held short overnight
+PASS 5.10 NSE swing long: CNC entry and a GTT OCO for stop and target
+PASS 5.11 after the square-off time no day entries
+PASS 5.12 a risk budget smaller than one share is refused with the numbers
+
+6. TradingView alerts
+PASS 6.1 the Pine script is v6, sends JSON with alert(), and hides the secret
+PASS 6.2 the script carries the engine's settings
+PASS 6.3 an alert for a backtest signal parses to the same entry, stop, target and time
+PASS 6.4 the same alert twice is refused as a duplicate
+PASS 6.5 wrong secret refused
+PASS 6.6 not JSON refused
+PASS 6.7 levels that are not a double top refused
+PASS 6.8 symbol not on the watchlist refused
+PASS 6.9 a stale alert (TradingView delivered it late) is refused
+PASS 6.10 a TradingView alert is routed by the same router
+
+65 passed, 0 failed
